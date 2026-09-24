@@ -28,6 +28,8 @@ def wait_text(label,timeout):
     return False
 report={'api':adb('shell','getprop','ro.build.version.sdk'),'tests':[],'liveTunnel':'not attempted'}
 try:
+    adb('shell','wm','size','1080x2400')
+    adb('shell','wm','density','420')
     adb('install','-r','artifacts/Radha-VPN-1.0-preview.apk')
     adb('shell','am','start','-n','com.radha.vpn/.MainActivity')
     tap('I understand · Continue');report['tests'].append('launch and consent')
