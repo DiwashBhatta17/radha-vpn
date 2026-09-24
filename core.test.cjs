@@ -1,0 +1,11 @@
+const {test} = require('node:test');
+const assert = require('node:assert/strict');
+const {csvRows,publicIPv4,parseDirectory,makeConfig,stateLabel} = require('./vpn-core.cjs');
+test('CSV handles quoted commas, escaped quotes and CRLF',()=>assert.deepEqual(csvRows('a,"b,c","d""e"\r\n'),[['a','b,c','d"e']]));
+test('private, loopback and multicast endpoints are rejected',()=>{ for(const ip of ['127.0.0.1','10.1.2.3','192.168.1.1','172.31.1.2','169.254.169.254','224.1.1.1','999.0.0.1','100.64.0.1']) assert.equal(publicIPv4(ip),false,ip); assert.equal(publicIPv4('8.8.8.8'),true); });
+const raw='client\ndev tun\nproto tcp\nremote 8.8.8.8 443\ncipher AES-128-CBC\nauth SHA1\n<ca>\n-----BEGIN CERTIFICATE-----\nTEST\n-----END CERTIFICATE-----\n</ca>\n';
+test('profile preserves certificate verification and forces a default route',()=>{const s=makeConfig(raw,{ip:'8.8.8.8'});assert.match(s,/remote-cert-tls server/);assert.match(s,/redirect-gateway def1/);assert.match(s,/<ca>/);assert.match(s,/tls-version-min 1.2/);});
+test('untrusted scripts and routing directives are never passed through',()=>{const s=makeConfig(raw+'up evil\nscript-security 2\nroute 1.2.3.4 255.255.255.255 net_gateway\n',{ip:'8.8.8.8'});assert.doesNotMatch(s,/evil|script-security|net_gateway/);});
+test('mismatched remote and missing certificate fail closed',()=>{assert.throws(()=>makeConfig(raw,{ip:'1.1.1.1'}));assert.throws(()=>makeConfig(raw.replace(/<ca>[\s\S]*<\/ca>/,''),{ip:'8.8.8.8'}));});
+test('directory rejects bad responses and respects academic-only restriction',()=>{assert.throws(()=>parseDirectory('<html>error</html>')); const header='*vpn_servers\n#HostName,IP,Score,Ping,Speed,CountryLong,CountryShort,NumVpnSessions,Operator,OpenVPN_ConfigData_Base64\n';const b=Buffer.from(raw).toString('base64');const rows=`vpn1,8.8.8.8,100,20,10000000,Japan,JP,3,Volunteer,${b}\nvpn2,1.1.1.1,999,1,20000000,Japan,JP,2,Academic Use Only,${b}\n`;assert.equal(parseDirectory(header+rows).length,1);});
+test('unknown states never imply a successful connection',()=>assert.equal(stateLabel(4),'Connection interrupted'));
