@@ -1,0 +1,55 @@
+name: Android APK
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+permissions:
+  contents: write
+concurrency:
+  group: android-${{ github.ref }}
+  cancel-in-progress: true
+jobs:
+  build-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - name: Test directory parser and VPN configuration
+        run: node --test core.test.cjs
+      - name: Build standalone APK
+        run: bash build-cloud.sh
+      - name: Enable emulator acceleration
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+      - name: Install and test on Android 11
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 30
+          arch: x86_64
+          target: google_apis
+          profile: pixel_2
+          disable-animations: true
+          script: python3 smoke-android.py
+      - name: Save APK and test evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: Radha-VPN-Android11
+          path: |
+            artifacts/
+            mobile/android/app/build/reports/lint-results-release.html
+          if-no-files-found: warn
+      - name: Publish tested preview
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "preview-${GITHUB_RUN_NUMBER}" artifacts/* --title "Radha VPN 1.0 preview · build ${GITHUB_RUN_NUMBER}" --prerelease --notes "Installable Android preview. See android11-test-report.json for emulator and live-relay results. Public VPN Gate relays may log connections and vary in availability. Uses a development signing certificate. Includes APK checksum and generated Android source."
