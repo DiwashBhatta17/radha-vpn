@@ -11,7 +11,8 @@ node configure-android.cjs
 mkdir -p mobile/android/app/src/main/jniLibs
 for abi in arm64-v8a x86_64; do
   curl --fail --location --retry 3 "https://github.com/ccnnde/react-native-simple-openvpn/releases/download/v2.0.0/$abi.zip" -o "$abi.zip"
-  unzip -q "$abi.zip" -d mobile/android/app/src/main/jniLibs
+  mkdir -p "mobile/android/app/src/main/jniLibs/$abi"
+  unzip -q "$abi.zip" -d "mobile/android/app/src/main/jniLibs/$abi"
 done
 find mobile/android/app/src/main/jniLibs -type f
 cd mobile/android
