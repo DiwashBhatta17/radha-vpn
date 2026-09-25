@@ -59,7 +59,10 @@ try:
     report['liveTunnel']='connected' if connected else 'no public relay connected in four attempts'
     screenshot('connection-android11')
     if connected:
-        assert 'com.radha.vpn' in adb('shell','dumpsys','connectivity'),'VPN missing from connectivity service'
+        interfaces=adb('shell','ip','addr','show')
+        connectivity=adb('shell','dumpsys','connectivity')
+        open('artifacts/tunnel-interface.txt','w').write(interfaces+'\n'+connectivity)
+        assert re.search(r'\btun\d+:',interfaces),'Connected state reported without a tunnel interface'
         report['tests'].append('native VPN tunnel established')
         tap('Disconnect VPN');assert wait_text('Disconnected',15)
         report['tests'].append('disconnect')
