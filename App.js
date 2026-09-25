@@ -11,7 +11,7 @@ export default function App(){
   const [loading,setLoading]=useState(false),[error,setError]=useState(''),[showServers,setShowServers]=useState(false),[query,setQuery]=useState('');
   const [consent,setConsent]=useState(false),[ready,setReady]=useState(false),[elapsed,setElapsed]=useState(0),[info,setInfo]=useState(false);
   const statusRef=useRef(0),timer=useRef(null),busy=useRef(false),started=useRef(0),mounted=useRef(true),request=useRef(null);
-  const updateState=s=>{const previous=statusRef.current;if(s===0&&previous===1)setError('The relay could not establish a tunnel. Choose a different server and try again.');statusRef.current=s;setStatus(s);if(s===2){clearTimeout(timer.current);if(!started.current)started.current=Date.now();}if(s===0){clearTimeout(timer.current);started.current=0;setElapsed(0);busy.current=false;} };
+  const updateState=s=>{const previous=statusRef.current;if(s===0&&previous===1)setError('The relay could not establish a tunnel. Choose a different server and try again.');statusRef.current=s;setStatus(s);if(s===2){setError('');clearTimeout(timer.current);if(!started.current)started.current=Date.now();}if(s===0){clearTimeout(timer.current);started.current=0;setElapsed(0);busy.current=false;} };
   useEffect(()=>{
     mounted.current=true;
     AsyncStorage.multiGet(['consent','relay']).then(items=>{setConsent(items[0][1]==='yes'); if(items[1][1])setSelected(JSON.parse(items[1][1]));}).catch(()=>{}).finally(()=>setReady(true));

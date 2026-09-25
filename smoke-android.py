@@ -59,6 +59,7 @@ try:
     report['liveTunnel']='connected' if connected else 'no public relay connected in four attempts'
     screenshot('connection-android11')
     if connected:
+        assert find('The relay could not establish a tunnel. Choose a different server and try again.') is None,'Stale connection error visible after success'
         interfaces=adb('shell','ip','addr','show')
         connectivity=adb('shell','dumpsys','connectivity')
         open('artifacts/tunnel-interface.txt','w').write(interfaces+'\n'+connectivity)
