@@ -39,10 +39,24 @@ try:
     root=tree(); servers=[n.get('content-desc','') for n in root.iter('node') if n.get('content-desc','').startswith('Select ')]
     if not servers:raise AssertionError('Live VPN Gate directory did not populate')
     screenshot('servers-android11');tap(servers[0]);report['tests'].append('HTTPS directory and server selection')
-    tap('Connect VPN');
-    if find('OK') is not None:tap('OK')
-    connected=wait_text('Connected',65)
-    report['liveTunnel']='connected' if connected else 'public relay did not connect during test'
+    connected=False;report['attempts']=[]
+    for attempt,relay in enumerate(servers[:4]):
+        if attempt:
+            tap('Choose server');tap(relay)
+        adb('logcat','-c')
+        tap('Connect VPN')
+        if find('OK') is not None:tap('OK')
+        connected=wait_text('Connected',55)
+        diagnostic=adb('logcat','-d','-s','RadhaVPN:I','AndroidRuntime:E')
+        open('artifacts/connection-attempt-'+str(attempt+1)+'.txt','w').write(diagnostic)
+        print('RELAY ATTEMPT '+str(attempt+1)+' '+relay+'\n'+diagnostic[-12000:],flush=True)
+        report['attempts'].append({'relay':relay,'connected':connected})
+        screenshot('connection-attempt-'+str(attempt+1))
+        if connected:break
+        if find('Cancel connection') is not None:tap('Cancel connection')
+        if not wait_text('Disconnected',10):
+            adb('shell','am','force-stop','com.radha.vpn');adb('shell','am','start','-n','com.radha.vpn/.MainActivity');time.sleep(28)
+    report['liveTunnel']='connected' if connected else 'no public relay connected in four attempts'
     screenshot('connection-android11')
     if connected:
         assert 'com.radha.vpn' in adb('shell','dumpsys','connectivity'),'VPN missing from connectivity service'
@@ -59,6 +73,7 @@ try:
     logs=adb('logcat','-d','-s','AndroidRuntime:E','ReactNativeJS:E')
     open('artifacts/runtime-log.txt','w').write(logs)
     assert 'FATAL EXCEPTION' not in logs and 'TypeError:' not in logs,logs[-3000:]
+    assert connected,'Live VPN connection failed. See connection-attempt logs; do not publish this build.'
     report['result']='passed'
 except Exception as e:
     report['result']='failed';report['error']=str(e)

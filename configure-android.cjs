@@ -18,3 +18,11 @@ edit('node_modules/react-native-simple-openvpn/android/src/main/java/com/norcod/
       vpnProfile.mBlockUnusedAddressFamilies = true;
       vpnProfile.mAllowLocalLAN = false;`));
 console.log('Configured Radha VPN Android package, native packaging and VPN bridge.');
+edit('node_modules/react-native-simple-openvpn/android/src/main/java/com/norcod/rnovpn/RNSimpleOpenvpnModule.java',s=>s.replace('params.putInt("state", getVpnState(level));',`params.putInt("state", getVpnState(level));
+    Log.i("RadhaVPN", state + " / " + level + " / " + logmessage);
+    if (level == ConnectionStatus.LEVEL_NOTCONNECTED && vpnProfile != null) {
+      de.blinkt.openvpn.core.LogItem[] entries = VpnStatus.getlogbuffer();
+      for (int i = Math.max(0, entries.length - 60); i < entries.length; i++) {
+        Log.i("RadhaVPN", entries[i].getString(reactContext));
+      }
+    }`));
